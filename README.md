@@ -6,13 +6,14 @@ Currently only CO2 emissions.
 - [Open-Meteo API](https://open-meteo.com)
 - [Information from Carbonmonitor.org](https://carbonmonitor.org/)
 - [TypeScript](https://www.typescriptlang.org/)
+- [React](https://react.dev/)
 - [MUI](https://mui.com/)
 
 ## Getting Started
 
 To get started, just clone the repository and run `npm install && npm run dev`:
 
-    git clone https://github.com/polina090193/react-calendar
+    git clone https://github.com/polina090193/air-monitor
     npm install
     npm run dev
 
