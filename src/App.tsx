@@ -13,6 +13,8 @@ function App() {
 
   const worldPlotColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), []);
 
+  const {selectedYear, setSelectedYear} = useState<number | null>(null)
+
   const loadWorldData = useCallback(async () => {
     setIsLoading(true)
     
@@ -102,44 +104,34 @@ function App() {
         .attr("stroke", worldPlotColors(index.toString()))
         .attr("stroke-width", 1.5)
         .attr("d", line)
-        // .on("mouseover", (event, d) => {
-        //   console.log('mouseover', d[0].date);
-          
-      //   // const [x, y] = d3.pointer(event);
-      //   // d3.select("#tooltip")
-      //   //   .style("left", `${x + 10}px`)
-      //   //   .style("top", `${y + 10}px`)
-      //   //   .style("display", "inline-block")
-      //   //   .html(`Date`); /* : ${d3.timeFormat("%Y-%m-%d")(d[0].date)}<br>Total: ${d[0].total} */
-      // })
-      // .on("mouseout", () => {
-      //   d3.select("#tooltip").style("display", "none");
-      // });
 
-      svg.selectAll("circle")
-        .data(yearData)
-        .enter()
-        .append("circle")
-        .attr("cx", (d) => xScale(yearData)(d.date))
-        .attr("cy", (d) => yScale(d.total))
-        .attr("r", 3)
-        .attr("fill", worldPlotColors(index.toString()))
-        .on("mouseover", (event, d: WorldDataDay) => {
-          console.log('mouseover', d.date);
-          const [x, y] = d3.pointer(event);
-          d3.select("#tooltip")
-            .style("left", `${x + 10}px`)
-            .style("top", `${y + 10}px`)
-            .style("display", "inline-block")
-            .style("width", "100px")
-            .style("height", "100px")
-            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Total: ${d.total}`);
-        })
-        .on("mouseout", () => {
-          d3.select("#tooltip").style("display", "none");
-        });
+      if (selectedYear !== null) {
+        svg
+          .append("rect")
+          .attr("width", width - margin.left - margin.right)
+          .attr("height", height - margin.top - margin.bottom)
+          .attr("transform", `translate(${margin.left}, ${margin.top})`)
+          .style("fill", "none")
+          .style("pointer-events", "all")
+          .on("mousemove", (event) => {
+            const [x] = d3.pointer(event);
+            const xDate = xScale(worldDataSeparatedByYear[0]).invert(x);
+            const closestData = worldData.reduce((a, b) => {
+              return Math.abs(b.date.getTime() - xDate.getTime()) < Math.abs(a.date.getTime() - xDate.getTime()) ? b : a;
+            });
+
+            d3.select("#tooltip")
+              .style("left", `${event.pageX + 10}px`)
+              .style("top", `${event.pageY + 10}px`)
+              .style("display", "inline-block")
+              .html(`Date: ${d3.timeFormat("%Y-%m-%d")(closestData.date)}<br>Total: ${closestData.total}`);
+          })
+          .on("mouseout", () => {
+            d3.select("#tooltip").style("display", "none");
+          });
+      }
     })
-  }, [margin, worldData, worldDataSeparatedByYear, worldPlotColors])
+  }, [height, margin, selectedYear, width, worldData, worldDataSeparatedByYear, worldPlotColors])
 
   useEffect(() => {
     loadWorldData()
@@ -156,6 +148,12 @@ function App() {
 
   return (
     <>
+      <select name="yearSelect" id="yearSelect" value={selectedYear} onChange={(event) => setSelectedYear(parseInt(event.target.value))}>
+        <option value="null">Select a year</option>
+        {worldDataSeparatedByYear.map((yearData, index) => (
+          <option key={index} value={yearData[0].date.getFullYear()}>{yearData[0].date.getFullYear()}</option>
+        ))}
+      </select>
       {isLoading ? 'Loading...' 
         : worldDataSeparatedByYear?.length 
           ? <svg id="chart" width={width} height={height} />
