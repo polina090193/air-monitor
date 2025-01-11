@@ -5,7 +5,7 @@ import './App.css'
 function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [worldData, setWorldData] = useState<WorldDataDay[]>([])
-  const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldDataDay[][]>([])
+  const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldDataYear[]>([])
 
   const width = useMemo(() => 1000, []);
   const height = useMemo(() => 400, []);
@@ -13,7 +13,7 @@ function App() {
 
   const worldPlotColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), []);
 
-  const {selectedYear, setSelectedYear} = useState<number | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined)
 
   const loadWorldData = useCallback(async () => {
     setIsLoading(true)
@@ -23,11 +23,11 @@ function App() {
       const fetchedWorldData = await fetch('../data/world_data.json')
 
       if (fetchedWorldData.ok) {
-        const worldDataJson: WorldDataRow[] = await fetchedWorldData.json();
+        const worldDataJson: WorldEmissionsDataRow[] = await fetchedWorldData.json();
 
         const parseDate = d3.timeParse("%Y-%m-%d") as (date: string) => Date;
 
-        setWorldData(worldDataJson.map((d: WorldDataRow) => ({
+        setWorldData(worldDataJson.map((d: WorldEmissionsDataRow) => ({
           date: parseDate(d.date),  
           total: d.total,
         })))
@@ -41,23 +41,22 @@ function App() {
   }, [])
 
   const getWorldDataSeparatedByYear = useCallback(() => {
-    const dataSeparatedByYear: WorldDataDay[][] = [];
+    const dataSeparatedByYear: WorldDataYear[] = [];
 
     if (worldData.length) {
-      let year = worldData[0].date.getFullYear();
       let currentYearData: WorldDataDay[] = [];
+      let year = worldData[0].date.getFullYear();
 
       for (const dataDay of worldData) {
         if (dataDay.date.getFullYear() === year) {
           currentYearData.push(dataDay);
         } else {
-          dataSeparatedByYear.push(currentYearData);
+          dataSeparatedByYear.push({ year, data: currentYearData });
           currentYearData = [dataDay];
           year = dataDay.date.getFullYear();
         }
       }
-
-      dataSeparatedByYear.push(currentYearData);
+      dataSeparatedByYear.push({ year, data: currentYearData });
     }
 
     setWorldDataSeparatedByYear(dataSeparatedByYear);
@@ -69,7 +68,13 @@ function App() {
 
     const formatMonth = d3.timeFormat("%B")
 
-    const xScale = (yearData = worldDataSeparatedByYear[0]) => d3
+    const yearDataForPlot = selectedYear 
+      ? worldDataSeparatedByYear.filter((yearData) => yearData.year === selectedYear)
+      : worldDataSeparatedByYear;
+
+    const yearDataXScaleInitializer = yearDataForPlot.length ? yearDataForPlot[0].data : [];
+
+    const xScale = (yearData = yearDataXScaleInitializer) => d3
       .scaleUtc()
       .domain(d3.extent(yearData, d => d.date) as [Date, Date])
       .range([margin.left, width - margin.right])
@@ -91,7 +96,7 @@ function App() {
       .attr("transform", `translate(${margin.left}, 0)`)
       .call(d3.axisLeft(yScale));
 
-    worldDataSeparatedByYear.forEach((yearData, index) => {
+    yearDataForPlot.forEach(({ data: yearData }, index) => {
       const line = d3
         .line<WorldDataDay>()
         .x((d) => xScale(yearData)(d.date))
@@ -105,7 +110,7 @@ function App() {
         .attr("stroke-width", 1.5)
         .attr("d", line)
 
-      if (selectedYear !== null) {
+      if (selectedYear) {
         svg
           .append("rect")
           .attr("width", width - margin.left - margin.right)
@@ -115,15 +120,16 @@ function App() {
           .style("pointer-events", "all")
           .on("mousemove", (event) => {
             const [x] = d3.pointer(event);
-            const xDate = xScale(worldDataSeparatedByYear[0]).invert(x);
+            const xDate = xScale(yearDataXScaleInitializer).invert(x + margin.left);
+            
             const closestData = worldData.reduce((a, b) => {
               return Math.abs(b.date.getTime() - xDate.getTime()) < Math.abs(a.date.getTime() - xDate.getTime()) ? b : a;
             });
 
             d3.select("#tooltip")
-              .style("left", `${event.pageX + 10}px`)
-              .style("top", `${event.pageY + 10}px`)
-              .style("display", "inline-block")
+              .style("left", `${event.pageX}px`)
+              .style("top", `${event.pageY}px`)
+              .style("display", "block")
               .html(`Date: ${d3.timeFormat("%Y-%m-%d")(closestData.date)}<br>Total: ${closestData.total}`);
           })
           .on("mouseout", () => {
@@ -148,17 +154,19 @@ function App() {
 
   return (
     <>
-      <select name="yearSelect" id="yearSelect" value={selectedYear} onChange={(event) => setSelectedYear(parseInt(event.target.value))}>
-        <option value="null">Select a year</option>
-        {worldDataSeparatedByYear.map((yearData, index) => (
-          <option key={index} value={yearData[0].date.getFullYear()}>{yearData[0].date.getFullYear()}</option>
-        ))}
-      </select>
-      {isLoading ? 'Loading...' 
-        : worldDataSeparatedByYear?.length 
-          ? <svg id="chart" width={width} height={height} />
-          : 'No data'}
-      <div id="tooltip" />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
+        <select name="yearSelect" id="yearSelect" value={selectedYear} onChange={(event) => setSelectedYear(parseInt(event.target.value))}>
+          <option value="null">Select a year</option>
+          {worldDataSeparatedByYear.map(({ year }, index) => (
+            <option key={index} value={year}>{year}</option>
+          ))}
+        </select>
+        {isLoading ? 'Loading...' 
+          : worldDataSeparatedByYear?.length 
+            ? <svg id="chart" width={width} height={height} />
+            : 'No data'}
+        <div id="tooltip" style={{ height: '20vh' }} />
+      </div>
     </>
   )
 }
