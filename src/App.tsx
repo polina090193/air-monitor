@@ -7,7 +7,7 @@ function App() {
   const [worldData, setWorldData] = useState<WorldDataDay[]>([])
   const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldDataYear[]>([])
 
-  const width = useMemo(() => 1000, []);
+  const width = useMemo(() => 1200, []);
   const height = useMemo(() => 400, []);
   const margin = useMemo(() => ({ top: 20, right: 30, bottom: 30, left: 50 }), []);
 
@@ -41,6 +41,8 @@ function App() {
   }, [])
 
   const getWorldDataSeparatedByYear = useCallback(() => {
+    console.log('getWorldDataSeparatedByYear');
+    
     const dataSeparatedByYear: WorldDataYear[] = [];
 
     if (worldData.length) {
@@ -63,6 +65,8 @@ function App() {
   }, [worldData])
 
   const renderWorldPlot = useCallback(() => {
+    console.log('renderWorldPlot');
+    
     const svg = d3.select("#chart");
     svg.selectAll("*").remove();
 
