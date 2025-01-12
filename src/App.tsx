@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as d3 from 'd3'
+import { Flex } from '@chakra-ui/react'
+import YearSelect from './components/form-components/YearSelect'
 import './App.css'
 
 function App() {
@@ -13,7 +15,7 @@ function App() {
 
   const worldPlotColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), []);
 
-  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined)
+  const [selectedYear, setSelectedYear] = useState<number>(0)
 
   const loadWorldData = useCallback(async () => {
     setIsLoading(true)
@@ -41,8 +43,6 @@ function App() {
   }, [])
 
   const getWorldDataSeparatedByYear = useCallback(() => {
-    console.log('getWorldDataSeparatedByYear');
-    
     const dataSeparatedByYear: WorldDataYear[] = [];
 
     if (worldData.length) {
@@ -64,9 +64,12 @@ function App() {
     setWorldDataSeparatedByYear(dataSeparatedByYear);
   }, [worldData])
 
+  const years = useMemo(
+    () => worldDataSeparatedByYear.map((yearData) => yearData.year),
+    [worldDataSeparatedByYear]
+  )
+
   const renderWorldPlot = useCallback(() => {
-    console.log('renderWorldPlot');
-    
     const svg = d3.select("#chart");
     svg.selectAll("*").remove();
 
@@ -158,19 +161,17 @@ function App() {
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
-        <select name="yearSelect" id="yearSelect" value={selectedYear} onChange={(event) => setSelectedYear(parseInt(event.target.value))}>
-          <option value="null">Select a year</option>
-          {worldDataSeparatedByYear.map(({ year }, index) => (
-            <option key={index} value={year}>{year}</option>
-          ))}
-        </select>
-        {isLoading ? 'Loading...' 
-          : worldDataSeparatedByYear?.length 
-            ? <svg id="chart" width={width} height={height} />
-            : 'No data'}
-        <div id="tooltip" style={{ height: '20vh' }} />
-      </div>
+      <Flex>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
+          <YearSelect years={years} onYearChange={setSelectedYear} />
+          {isLoading ? 'Loading...' 
+            : worldDataSeparatedByYear?.length 
+              ? <svg id="chart" width={width} height={height} />
+              : 'No data'}
+          <div id="tooltip" style={{ height: '20vh' }} />
+        </div>
+      </Flex>
     </>
   )
 }
