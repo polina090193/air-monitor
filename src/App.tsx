@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as d3 from 'd3'
+import { useFetchData } from './queries/useFetchData'
 import { Flex } from '@chakra-ui/react'
 import YearSelect from './components/form-components/YearSelect'
 import './App.css'
 
 function App() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [worldData, setWorldData] = useState<WorldDataDay[]>([])
-  const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldDataYear[]>([])
+  const { data: rawData, error, isLoading } = useFetchData('yearWorldCO2') as {
+    data: WorldCO2DataRow[],
+    error: Error,
+    isLoading: boolean
+  };
+  const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldCO2DataYear[]>([])
 
   const width = useMemo(() => 1200, []);
   const height = useMemo(() => 400, []);
@@ -17,36 +21,22 @@ function App() {
 
   const [selectedYear, setSelectedYear] = useState<number>(0)
 
-  const loadWorldData = useCallback(async () => {
-    setIsLoading(true)
-    
-    try {
-      // Original source: https://carbonmonitor.org/
-      const fetchedWorldData = await fetch('../data/world_data.json')
-
-      if (fetchedWorldData.ok) {
-        const worldDataJson: WorldEmissionsDataRow[] = await fetchedWorldData.json();
-
-        const parseDate = d3.timeParse("%Y-%m-%d") as (date: string) => Date;
-
-        setWorldData(worldDataJson.map((d: WorldEmissionsDataRow) => ({
-          date: parseDate(d.date),  
-          total: d.total,
-        })))
-      } else {
-        console.error('Error fetching world data:', fetchedWorldData.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching world data:', error)
-    }
-    setIsLoading(false)
+  const adjustDataForTimelinePlot = useCallback((data: WorldCO2DataRow[] | []) => {
+    return data?.map((row) => ({
+      date: d3.timeParse("%Y-%m-%d")(row.date) as Date,  
+      total: row.total,
+    })) || []
   }, [])
 
+  const worldData = useMemo(() => 
+    adjustDataForTimelinePlot(rawData), 
+  [adjustDataForTimelinePlot, rawData])
+
   const getWorldDataSeparatedByYear = useCallback(() => {
-    const dataSeparatedByYear: WorldDataYear[] = [];
+    const dataSeparatedByYear: WorldCO2DataYear[] = [];
 
     if (worldData.length) {
-      let currentYearData: WorldDataDay[] = [];
+      let currentYearData: WorldCO2DataDay[] = [];
       let year = worldData[0].date.getFullYear();
 
       for (const dataDay of worldData) {
@@ -105,7 +95,7 @@ function App() {
 
     yearDataForPlot.forEach(({ data: yearData }, index) => {
       const line = d3
-        .line<WorldDataDay>()
+        .line<WorldCO2DataDay>()
         .x((d) => xScale(yearData)(d.date))
         .y((d) => yScale(d.total));
   
@@ -147,10 +137,6 @@ function App() {
   }, [height, margin, selectedYear, width, worldData, worldDataSeparatedByYear, worldPlotColors])
 
   useEffect(() => {
-    loadWorldData()
-  }, [loadWorldData])
-
-  useEffect(() => {
     getWorldDataSeparatedByYear()
   }, [getWorldDataSeparatedByYear])
 
@@ -158,11 +144,12 @@ function App() {
     if (!worldDataSeparatedByYear?.length) return
     renderWorldPlot()
   }, [worldDataSeparatedByYear, renderWorldPlot]);
+  
+  if (error) return <p>Error loading data</p>;
 
   return (
     <>
       <Flex>
-
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
           <YearSelect years={years} onYearChange={setSelectedYear} />
           {isLoading ? 'Loading...' 

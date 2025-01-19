@@ -1,4 +1,4 @@
-declare interface WorldEmissionsDataRow {
+declare interface WorldCO2DataRow {
     date: string;
     domestic_aviation: number;
     ground_transport: number;
@@ -9,12 +9,12 @@ declare interface WorldEmissionsDataRow {
     total: number;
 }
 
-declare interface WorldDataDay {
+declare interface WorldCO2DataDay {
     date: Date;
     total: number;
 }
 
-declare interface WorldDataYear {
+declare interface WorldCO2DataYear {
     year: number;
-    data: WorldDataDay[]
+    data: WorldCO2DataDay[]
 }
