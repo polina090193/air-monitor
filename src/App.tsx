@@ -14,7 +14,7 @@ function App() {
   const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldCO2DataYear[]>([])
 
   const width = useMemo(() => 1200, []);
-  const height = useMemo(() => 400, []);
+  const height = useMemo(() => 600, []);
   const margin = useMemo(() => ({ top: 20, right: 30, bottom: 30, left: 50 }), []);
 
   const worldPlotColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), []);
@@ -132,6 +132,26 @@ function App() {
           .on("mouseout", () => {
             d3.select("#tooltip").style("display", "none");
           });
+      } else {
+        const legend = svg.append("g")
+          .attr("transform", `translate(${width - margin.right * 2}, ${margin.top})`);
+
+        yearDataForPlot.forEach((yearData, i) => {
+          const legendRow = legend.append("g")
+            .attr("transform", `translate(0, ${i * 20})`);
+
+          legendRow.append("rect")
+            .attr("width", 10)
+            .attr("height", 10)
+            .attr("fill", worldPlotColors(i.toString()));
+
+          legendRow.append("text")
+            .attr("x", 15)
+            .attr("y", 10)
+            .attr("font-size", "12px")
+            .attr("fill", "white")
+            .text(yearData.year);
+        });
       }
     })
   }, [height, margin, selectedYear, width, worldData, worldDataSeparatedByYear, worldPlotColors])
