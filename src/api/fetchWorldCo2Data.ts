@@ -1,7 +1,7 @@
 export const fetchWorldCo2Data = async (): Promise<WorldCO2DataRow[]> => {
   try {
     // Original source: https://carbonmonitor.org/
-    const fetchedWorldData = await fetch('../data/world_data.json')
+    const fetchedWorldData = await fetch('/world_data.json')
   
     if (fetchedWorldData.ok) {
       return await fetchedWorldData.json();
