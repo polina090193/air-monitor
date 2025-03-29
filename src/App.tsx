@@ -6,11 +6,12 @@ import YearSelect from './components/form-components/YearSelect'
 import './App.css'
 
 function App() {
-  const { data: rawData, error, isLoading } = useFetchData('yearWorldCO2') as {
+  const { data: rawData, error, isLoading } = useFetchData("yearWorldCO2") as {
     data: WorldCO2DataRow[],
     error: Error,
     isLoading: boolean
   };
+  
   const [worldDataSeparatedByYear, setWorldDataSeparatedByYear] = useState<WorldCO2DataYear[]>([])
 
   const width = useMemo(() => 1200, []);
@@ -22,7 +23,7 @@ function App() {
   const [selectedYear, setSelectedYear] = useState<number>(0)
 
   const adjustDataForTimelinePlot = useCallback((data: WorldCO2DataRow[] | []) => {
-    return data?.map((row) => ({
+    return data?.filter((dataDay) => dataDay?.date).map((row) => ({
       date: d3.timeParse("%Y-%m-%d")(row.date) as Date,  
       total: row.total,
     })) || []
@@ -33,13 +34,15 @@ function App() {
   [adjustDataForTimelinePlot, rawData])
 
   const getWorldDataSeparatedByYear = useCallback(() => {
-    const dataSeparatedByYear: WorldCO2DataYear[] = [];
-
-    if (worldData.length) {
+    if (worldData?.length) {
+      const dataSeparatedByYear: WorldCO2DataYear[] = [];
+      const sortedWorldData = worldData.sort((a, b) => a.date.getTime() - b.date.getTime());
+      
       let currentYearData: WorldCO2DataDay[] = [];
-      let year = worldData[0].date.getFullYear();
+      let year = sortedWorldData[0].date.getFullYear();
 
-      for (const dataDay of worldData) {
+      for (const dataDay of sortedWorldData) {
+        
         if (dataDay.date.getFullYear() === year) {
           currentYearData.push(dataDay);
         } else {
@@ -49,9 +52,8 @@ function App() {
         }
       }
       dataSeparatedByYear.push({ year, data: currentYearData });
+      setWorldDataSeparatedByYear(dataSeparatedByYear);
     }
-
-    setWorldDataSeparatedByYear(dataSeparatedByYear);
   }, [worldData])
 
   const years = useMemo(
@@ -168,18 +170,16 @@ function App() {
   if (error) return <p>Error loading data</p>;
 
   return (
-    <>
-      <Flex>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
-          <YearSelect years={years} onYearChange={setSelectedYear} />
-          {isLoading ? 'Loading...' 
-            : worldDataSeparatedByYear?.length 
-              ? <svg id="chart" width={width} height={height} />
-              : 'No data'}
-          <div id="tooltip" style={{ height: '20vh' }} />
-        </div>
-      </Flex>
-    </>
+    <Flex>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100vh', marginTop: '20vh' }}>
+        <YearSelect years={years} onYearChange={setSelectedYear} />
+        {isLoading ? 'Loading...' 
+          : worldDataSeparatedByYear?.length 
+            ? <svg id="chart" width={width} height={height} />
+            : 'No data'}
+        <div id="tooltip" style={{ height: '20vh' }} />
+      </div>
+    </Flex>
   )
 }
 

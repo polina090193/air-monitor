@@ -10,5 +10,9 @@ export const useFetchData = (key: string) => {
   return useQuery({
     queryKey: [key],
     queryFn: fetchFunction,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1
   })
 };

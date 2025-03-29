@@ -1,13 +1,16 @@
+import { apiSuffix, apiUrl } from "./variables";
+
 export const fetchWorldCo2Data = async (): Promise<WorldCO2DataRow[]> => {
   try {
     // Original source: https://carbonmonitor.org/
-    const response = await fetch('https://h4nz7c0yxg.execute-api.eu-north-1.amazonaws.com/world-co2');
+    const response = await fetch(`${apiUrl}/world-co2${apiSuffix}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     } 
     
     const data = await response.json();
+
     return data
     
   } catch (error) {
