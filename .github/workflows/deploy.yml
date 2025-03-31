@@ -13,10 +13,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Create .env file
+        run: echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+
       - name: Install dependencies and build
         run: |
           npm install
-          npm run build  # Adjust based on your framework
+          npm run build
 
       - name: Deploy to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
